@@ -1407,6 +1407,12 @@ RTEXITCODE handleModifyVM(HandlerArg *a)
                     CHECK_ERROR(nic, COMSETTER(AdapterType)(NetworkAdapterType_I82545EM));
                 }
 #endif
+#ifdef VBOX_WITH_PTNET
+                else if (!RTStrICmp(ValueUnion.psz, "ptnet"))
+                {
+                    CHECK_ERROR(nic, COMSETTER(AdapterType)(NetworkAdapterType_NetmapPtNet));
+                }
+#endif /* VBOX_WITH_PTNET */
 #ifdef VBOX_WITH_VIRTIO
                 else if (!RTStrICmp(ValueUnion.psz, "virtio"))
                 {

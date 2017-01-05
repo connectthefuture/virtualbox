@@ -656,6 +656,12 @@ void UIMachineSettingsNetwork::populateComboboxes()
         m_pAdapterTypeCombo->setItemData(iAdapterTypeIndex, m_pAdapterTypeCombo->itemText(iAdapterTypeIndex), Qt::ToolTipRole);
         ++iAdapterTypeIndex;
 #endif /* VBOX_WITH_E1000 */
+#ifdef VBOX_WITH_PTNET
+        m_pAdapterTypeCombo->insertItem(iAdapterTypeIndex, gpConverter->toString(KNetworkAdapterType_NetmapPtNet));
+        m_pAdapterTypeCombo->setItemData(iAdapterTypeIndex, KNetworkAdapterType_NetmapPtNet);
+        m_pAdapterTypeCombo->setItemData(iAdapterTypeIndex, m_pAdapterTypeCombo->itemText(iAdapterTypeIndex), Qt::ToolTipRole);
+        ++iAdapterTypeIndex;
+#endif /* VBOX_WITH_PTNET */
 #ifdef VBOX_WITH_VIRTIO
         m_pAdapterTypeCombo->insertItem(iAdapterTypeIndex, gpConverter->toString(KNetworkAdapterType_Virtio));
         m_pAdapterTypeCombo->setItemData(iAdapterTypeIndex, KNetworkAdapterType_Virtio);

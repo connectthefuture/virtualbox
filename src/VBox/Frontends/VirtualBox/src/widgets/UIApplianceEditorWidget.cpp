@@ -460,6 +460,9 @@ QWidget *HardwareItem::createEditor(QWidget *pParent, const QStyleOptionViewItem
                 e->addItem(gpConverter->toString(KNetworkAdapterType_I82543GC), KNetworkAdapterType_I82543GC);
                 e->addItem(gpConverter->toString(KNetworkAdapterType_I82545EM), KNetworkAdapterType_I82545EM);
 #endif /* VBOX_WITH_E1000 */
+#ifdef VBOX_WITH_PTNET
+                e->addItem(gpConverter->toString(KNetworkAdapterType_NetmapPtNet), KNetworkAdapterType_NetmapPtNet);
+#endif /* VBOX_WITH_PTNET */
 #ifdef VBOX_WITH_VIRTIO
                 e->addItem(gpConverter->toString(KNetworkAdapterType_Virtio), KNetworkAdapterType_Virtio);
 #endif /* VBOX_WITH_VIRTIO */

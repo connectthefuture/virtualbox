@@ -99,6 +99,10 @@
 # undef LOG_GROUP
 # include "../Network/DevE1000.cpp"
 #endif
+#ifdef VBOX_WITH_PTNET
+# undef LOG_GROUP
+# include "../Network/DevNetmapPtNet.cpp"
+#endif
 #ifdef VBOX_WITH_VIRTIO
 # undef LOG_GROUP
 # include "../Network/DevVirtioNet.cpp"
@@ -1589,6 +1593,10 @@ int main()
     GEN_CHECK_OFF(E1KSTATE, phy);
     GEN_CHECK_OFF(E1KSTATE, StatReceiveBytes);
 #endif /* VBOX_WITH_E1000 */
+
+#ifdef VBOX_WITH_PTNET
+    // nothing for the time being
+#endif /* VBOX_WITH_PTNET */
 
 #ifdef VBOX_WITH_VIRTIO
     GEN_CHECK_OFF(VPCISTATE, cs);

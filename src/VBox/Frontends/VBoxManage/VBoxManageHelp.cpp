@@ -737,6 +737,9 @@ void printUsage(USAGECATEGORY fCategory, uint32_t fSubCategory, PRTSTREAM pStrm)
 #ifdef VBOX_WITH_E1000
                   "|\n                                            82540EM|82543GC|82545EM"
 #endif
+#ifdef VBOX_WITH_PTNET
+                  "|\n                                            ptnet"
+#endif
 #ifdef VBOX_WITH_VIRTIO
                   "|\n                                            virtio"
 #endif /* VBOX_WITH_VIRTIO */

@@ -43,6 +43,10 @@
 # undef LOG_GROUP
 # include "../Network/DevE1000.cpp"
 #endif
+#ifdef VBOX_WITH_PTNET
+# undef LOG_GROUP
+# include "../Network/DevNetmapPtNet.cpp"
+#endif
 #undef LOG_GROUP
 #include "../Network/DevPCNet.cpp"
 #ifdef VBOX_WITH_VIRTIO
@@ -309,6 +313,9 @@ int main()
     CHECK_MEMBER_ALIGNMENT(E1KSTATE, cs, 8);
     CHECK_MEMBER_ALIGNMENT(E1KSTATE, csRx, 8);
     CHECK_MEMBER_ALIGNMENT(E1KSTATE, StatReceiveBytes, 8);
+#endif
+#ifdef VBOX_WITH_PTNET
+    // nothing for the time being
 #endif
 #ifdef VBOX_WITH_VIRTIO
     CHECK_MEMBER_ALIGNMENT(VNETSTATE, StatReceiveBytes, 8);

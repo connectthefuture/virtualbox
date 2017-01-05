@@ -1503,6 +1503,10 @@ inline static const char *networkAdapterTypeToName(NetworkAdapterType_T adapterT
         case NetworkAdapterType_I82545EM:
             return "e1000";
 #endif
+#ifdef VBOX_WITH_PTNET
+        case NetworkAdapterType_NetmapPtNet:
+            return "ptnet";
+#endif
 #ifdef VBOX_WITH_VIRTIO
         case NetworkAdapterType_Virtio:
             return "virtio-net";

@@ -51,6 +51,9 @@ extern const PDMDEVREG g_DevicePCNet;
 #ifdef VBOX_WITH_E1000
 extern const PDMDEVREG g_DeviceE1000;
 #endif
+#ifdef VBOX_WITH_PTNET
+extern const PDMDEVREG g_DeviceNetmapPtNet;
+#endif
 #ifdef VBOX_WITH_VIRTIO
 extern const PDMDEVREG g_DeviceVirtioNet;
 #endif

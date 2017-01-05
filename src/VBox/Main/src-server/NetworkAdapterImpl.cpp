@@ -237,6 +237,9 @@ HRESULT NetworkAdapter::setAdapterType(NetworkAdapterType_T aAdapterType)
         case NetworkAdapterType_I82543GC:
         case NetworkAdapterType_I82545EM:
 #endif
+#ifdef VBOX_WITH_PTNET
+        case NetworkAdapterType_NetmapPtNet:
+#endif /* VBOX_WITH_PTNET */
 #ifdef VBOX_WITH_VIRTIO
         case NetworkAdapterType_Virtio:
 #endif /* VBOX_WITH_VIRTIO */

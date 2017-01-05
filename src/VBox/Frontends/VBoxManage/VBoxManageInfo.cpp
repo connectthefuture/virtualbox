@@ -1293,6 +1293,9 @@ HRESULT showVMInfo(ComPtr<IVirtualBox> pVirtualBox,
                     case NetworkAdapterType_I82543GC:   pszNICType = "82543GC";     break;
                     case NetworkAdapterType_I82545EM:   pszNICType = "82545EM";     break;
 #endif
+#ifdef VBOX_WITH_PTNET
+                    case NetworkAdapterType_NetmapPtNet: pszNICType = "ptnet";      break;
+#endif
 #ifdef VBOX_WITH_VIRTIO
                     case NetworkAdapterType_Virtio:     pszNICType = "virtio";      break;
 #endif

@@ -95,6 +95,8 @@ typedef enum LOGGROUP
     LOG_GROUP_DEV_DMA,
     /** Gigabit Ethernet Device group. */
     LOG_GROUP_DEV_E1000,
+    /** Netmap passthrough networking group. */
+    LOG_GROUP_DEV_PTNET,
     /** Extensible Firmware Interface Device group. */
     LOG_GROUP_DEV_EFI,
     /** USB EHCI Device group. */
@@ -826,6 +828,7 @@ typedef enum LOGGROUP
     "DEV_BUSLOGIC", \
     "DEV_DMA",      \
     "DEV_E1000",    \
+    "DEV_PTNET",    \
     "DEV_EFI",      \
     "DEV_EHCI",     \
     "DEV_FDC",      \

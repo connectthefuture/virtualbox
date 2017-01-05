@@ -429,6 +429,12 @@ if !defined(VBOX_ONLY_EXTPACKS)         # Goes on almost to the end of the file.
  	Network/DevEEPROM.cpp
  endif
 
+ ifdef VBOX_WITH_PTNET
+  VBoxDD_DEFS           += VBOX_WITH_PTNET
+  VBoxDD_SOURCES        += \
+	Network/DevNetmapPtNet.cpp
+ endif
+
  ifdef VBOX_WITH_VIRTIO
   VBoxDD_DEFS           += VBOX_WITH_VIRTIO
   VBoxDD_SOURCES        += \
@@ -894,6 +900,12 @@ if !defined(VBOX_ONLY_EXTPACKS)         # Goes on almost to the end of the file.
   	Network/DevE1000Phy.cpp
   endif
 
+  ifdef VBOX_WITH_PTNET
+   VBoxDD_DEFS          += VBOX_WITH_PTNET
+   VBoxDD_SOURCES       += \
+	Network/DevNetmapPtNet.cpp
+  endif
+
   ifdef VBOX_WITH_VIRTIO
    VBoxDDRC_DEFS        += VBOX_WITH_VIRTIO
    VBoxDDRC_SOURCES     += \
@@ -1070,6 +1082,12 @@ if !defined(VBOX_ONLY_EXTPACKS)         # Goes on almost to the end of the file.
   VBoxDDR0_SOURCES      += \
  	Network/DevE1000.cpp \
  	Network/DevE1000Phy.cpp
+ endif
+
+ ifdef VBOX_WITH_PTNET
+  VBoxDD_DEFS           += VBOX_WITH_PTNET
+  VBoxDD_SOURCES        += \
+	Network/DevNetmapPtNet.cpp
  endif
 
  ifdef VBOX_WITH_VIRTIO

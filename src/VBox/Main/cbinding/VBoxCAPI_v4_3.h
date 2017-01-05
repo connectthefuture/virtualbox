@@ -2876,7 +2876,8 @@ typedef enum NetworkAdapterType
     NetworkAdapterType_I82540EM = 3,
     NetworkAdapterType_I82543GC = 4,
     NetworkAdapterType_I82545EM = 5,
-    NetworkAdapterType_Virtio = 6
+    NetworkAdapterType_Virtio = 6,
+    NetworkAdapterType_NetmapPtNet = 7
 } NetworkAdapterType;
 /* End of enum NetworkAdapterType declaration */
 #define NetworkAdapterType_T PRUint32

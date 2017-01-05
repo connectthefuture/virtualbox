@@ -2413,6 +2413,10 @@ int Console::i_configConstructorInner(PUVM pUVM, PVM pVM, AutoWriteLock *pAlock)
         PCFGMNODE pDevE1000 = NULL;          /* E1000-type devices */
         InsertConfigNode(pDevices, "e1000", &pDevE1000);
 #endif
+#ifdef VBOX_WITH_PTNET
+        PCFGMNODE pDevNetmapPtNet = NULL;    /* netmap passthrough network devices */
+        InsertConfigNode(pDevices, "ptnet", &pDevNetmapPtNet);
+#endif /* VBOX_WITH_PTNET */
 #ifdef VBOX_WITH_VIRTIO
         PCFGMNODE pDevVirtioNet = NULL;          /* Virtio network devices */
         InsertConfigNode(pDevices, "virtio-net", &pDevVirtioNet);
@@ -2447,6 +2451,12 @@ int Console::i_configConstructorInner(PUVM pUVM, PVM pVM, AutoWriteLock *pAlock)
                     pszAdapterName = "e1000";
                     break;
 #endif
+#ifdef VBOX_WITH_PTNET
+                case NetworkAdapterType_NetmapPtNet:
+                    pDev = pDevNetmapPtNet;
+                    pszAdapterName = "ptnet";
+                    break;
+#endif /* VBOX_WITH_PTNET */
 #ifdef VBOX_WITH_VIRTIO
                 case NetworkAdapterType_Virtio:
                     pDev = pDevVirtioNet;
