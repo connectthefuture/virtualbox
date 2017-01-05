@@ -2905,7 +2905,7 @@ if [ "$OS" = "darwin" ]; then
   check_darwinversion
 fi
 # the tools
-check_gcc
+#check_gcc
 if [ $ONLY_ADDITIONS -eq 0 ]; then
   check_open_watcom
   [ "$OS" != "darwin"  ] && check_iasl
