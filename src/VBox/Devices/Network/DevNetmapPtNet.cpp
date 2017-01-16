@@ -198,6 +198,8 @@ PDMBOTHCBDECL(int) ptnetIOPortIn(PPDMDEVINS pDevIns, void *pvUser, RTIOPORT uPor
     int         rc = VINF_SUCCESS;
     RT_NOREF_PV(pvUser);
 
+    *pu32 = 0;
+
     //uPort -= pThis->IOPortBase;
     switch (uPort) {
         default:
@@ -219,8 +221,8 @@ PDMBOTHCBDECL(int) ptnetIOPortOut(PPDMDEVINS pDevIns, void *pvUser, RTIOPORT uPo
     RT_NOREF_PV(pvUser);
 
     //uPort -= pThis->IOPortBase;
-    switch (uport) {
-        default;
+    switch (uPort) {
+        default:
             PtnetLog(("%s %s: uPort=%RTiop value=%08x cb=%u\n", pThis->szPrf, __func__, uPort, u32, cb));
             break;
     }
@@ -279,6 +281,7 @@ static DECLCALLBACK(int) ptnetMap(PPDMDEVINS pDevIns, PPDMPCIDEV pPciDev, uint32
 static DECLCALLBACK(int) ptnetR3NetworkDown_WaitReceiveAvail(PPDMINETWORKDOWN pInterface, RTMSINTERVAL cMillies)
 {
     PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkDown);
+    NOREF(cMillies);
 
     PtnetLog(("%s %s\n", pThis->szPrf, __func__));
     //RTSemEventWait(pThis->hEvent, cMillies);
@@ -291,7 +294,8 @@ static DECLCALLBACK(int) ptnetR3NetworkDown_WaitReceiveAvail(PPDMINETWORKDOWN pI
 static DECLCALLBACK(int) ptnetR3NetworkDown_Receive(PPDMINETWORKDOWN pInterface, const void *pvBuf, size_t cb)
 {
     PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkDown);
-    int       rc = VINF_SUCCESS;
+    NOREF(pvBuf);
+    NOREF(cb);
 
     PtnetLog(("%s Dropping incoming packet.\n", pThis->szPrf));
     return VINF_SUCCESS;
@@ -302,6 +306,7 @@ static DECLCALLBACK(int) ptnetR3NetworkDown_Receive(PPDMINETWORKDOWN pInterface,
  */
 static DECLCALLBACK(void) ptnetR3NetworkDown_XmitPending(PPDMINETWORKDOWN pInterface)
 {
+    PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkDown);
     PtnetLog(("%s %s\n", pThis->szPrf, __func__));
 }
 
@@ -425,7 +430,7 @@ static DECLCALLBACK(int) ptnetLoadPrep(PPDMDEVINS pDevIns, PSSMHANDLE pSSM)
 static DECLCALLBACK(int) ptnetLoadExec(PPDMDEVINS pDevIns, PSSMHANDLE pSSM, uint32_t uVersion, uint32_t uPass)
 {
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
-    int       rc;
+    NOREF(uVersion);
 
     PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     if (uPass == SSM_PASS_FINAL)
@@ -468,6 +473,8 @@ static DECLCALLBACK(void) ptnetInfo(PPDMDEVINS pDevIns, PCDBGFINFOHLP pHlp, cons
 {
     RT_NOREF(pszArgs);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
+
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     /*
      * Show info.
      */
