@@ -870,7 +870,7 @@ const PDMDEVREG g_DeviceNetmapPtNet =
     "Netmap network passthrough device.\n",
 
     /* Flags, combination of the PDM_DEVREG_FLAGS_* \#defines. */
-    PDM_DEVREG_FLAGS_DEFAULT_BITS | /* PDM_DEVREG_FLAGS_RC remove */ | PDM_DEVREG_FLAGS_R0,
+    PDM_DEVREG_FLAGS_DEFAULT_BITS | /* PDM_DEVREG_FLAGS_RC remove | */ PDM_DEVREG_FLAGS_R0,
     /* Device class(es), combination of the PDM_DEVREG_CLASS_* \#defines. */
     PDM_DEVREG_CLASS_NETWORK,
     /* Maximum number of instances (per VM). */
