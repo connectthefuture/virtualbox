@@ -81,57 +81,18 @@ struct PtnetState_st
     bool        fCableConnected;
     /** EMT: */
     bool        fR0Enabled;
-    /** EMT: */
-    bool        fRCEnabled;
 
     /** All: Device register storage. */
     uint32_t    auRegs[100];
 
     /** EMT: Gets signalled when XXX happens. */
     RTSEMEVENT hEvent;
-
-    /** EMT: Offset of the register to be read via IO. */
-    uint32_t    uSelectedReg;
 };
 typedef struct PtnetState_st PTNETST;
-/** Pointer to the E1000 device state. */
+/** Pointer to the PTNET device state. */
 typedef PTNETST *PPTNETST;
 
 #ifndef VBOX_DEVICE_STRUCT_TESTCASE
-
-/* Forward declarations ******************************************************/
-static int ptnetRegReadDefault       (PPTNETST pThis, uint32_t offset, uint32_t index, uint32_t *pu32Value);
-static int ptnetRegWriteDefault      (PPTNETST pThis, uint32_t offset, uint32_t index, uint32_t u32Value);
-
-/**
- * Register map table.
- *
- * Override pfnRead and pfnWrite to get register-specific behavior.
- */
-static const struct E1kRegMap_st
-{
-    /** Register offset in the register space. */
-    uint32_t   offset;
-    /** Size in bytes. Registers of size > 4 are in fact tables. */
-    uint32_t   size;
-    /** Readable bits. */
-    uint32_t   readable;
-    /** Writable bits. */
-    uint32_t   writable;
-    /** Read callback. */
-    int       (*pfnRead)(PPTNETST pThis, uint32_t offset, uint32_t index, uint32_t *pu32Value);
-    /** Write callback. */
-    int       (*pfnWrite)(PPTNETST pThis, uint32_t offset, uint32_t index, uint32_t u32Value);
-    /** Abbreviated name. */
-    const char *abbrev;
-    /** Full name. */
-    const char *name;
-} g_aE1kRegMap[100] =
-{
-    /* offset  size     read mask   write mask  read callback            write callback            abbrev      full name                     */
-    /*-------  -------  ----------  ----------  -----------------------  ------------------------  ----------  ------------------------------*/
-    { 0x00000, 0x00004, 0x0000FFFF, 0x0000FFFF, ptnetRegReadDefault      , ptnetRegWriteDefault       , "TDT"     , "Transmit Descriptor Tail" }
-};
 
 #define ptnetCsEnter(ps, rc) PDMCritSectEnter(&ps->cs, rc)
 #define ptnetCsLeave(ps) PDMCritSectLeave(&ps->cs)
@@ -190,217 +151,6 @@ static DECLCALLBACK(bool) ptnetCanRxQueueConsumer(PPDMDEVINS pDevIns, PPDMQUEUEI
 
 #endif /* IN_RING3 */
 
-/**
- * Default register read handler.
- *
- * Retrieves the value of register from register array in device state structure.
- * Bits corresponding to 0s in 'readable' mask will always read as 0s.
- *
- * @remarks The 'mask' parameter is simply ignored as masking and shifting is
- *          done in the caller.
- *
- * @returns VBox status code.
- *
- * @param   pThis       The device state structure.
- * @param   offset      Register offset in memory-mapped frame.
- * @param   index       Register index in register array.
- * @thread  EMT
- */
-static int ptnetRegReadDefault(PPTNETST pThis, uint32_t offset, uint32_t index, uint32_t *pu32Value)
-{
-    RT_NOREF_PV(offset);
-
-    AssertReturn(index < E1K_NUM_OF_32BIT_REGS, VERR_DEV_IO_ERROR);
-    *pu32Value = pThis->auRegs[index] & g_aE1kRegMap[index].readable;
-
-    return VINF_SUCCESS;
-}
-
-/**
- * Default register write handler.
- *
- * Stores the value to the register array in device state structure. Only bits
- * corresponding to 1s both in 'writable' and 'mask' will be stored.
- *
- * @returns VBox status code.
- *
- * @param   pThis       The device state structure.
- * @param   offset      Register offset in memory-mapped frame.
- * @param   index       Register index in register array.
- * @param   value       The value to store.
- * @param   mask        Used to implement partial writes (8 and 16-bit).
- * @thread  EMT
- */
-
-static int ptnetRegWriteDefault(PPTNETST pThis, uint32_t offset, uint32_t index, uint32_t value)
-{
-    RT_NOREF_PV(offset);
-
-    AssertReturn(index < E1K_NUM_OF_32BIT_REGS, VERR_DEV_IO_ERROR);
-    pThis->auRegs[index] = (value & g_aE1kRegMap[index].writable)
-                         | (pThis->auRegs[index] & ~g_aE1kRegMap[index].writable);
-
-    return VINF_SUCCESS;
-}
-
-/**
- * Search register table for matching register.
- *
- * @returns Index in the register table or -1 if not found.
- *
- * @param   offReg      Register offset in memory-mapped region.
- * @thread  EMT
- */
-static int ptnetRegLookup(uint32_t offReg)
-{
-
-#if 0
-    int index;
-
-    for (index = 0; index < E1K_NUM_OF_REGS; index++)
-    {
-        if (g_aE1kRegMap[index].offset <= offReg && offReg < g_aE1kRegMap[index].offset + g_aE1kRegMap[index].size)
-        {
-            return index;
-        }
-    }
-#else
-    int iStart = 0;
-    int iEnd   = E1K_NUM_OF_BINARY_SEARCHABLE;
-    for (;;)
-    {
-        int i = (iEnd - iStart) / 2 + iStart;
-        uint32_t offCur = g_aE1kRegMap[i].offset;
-        if (offReg < offCur)
-        {
-            if (i == iStart)
-                break;
-            iEnd = i;
-        }
-        else if (offReg >= offCur + g_aE1kRegMap[i].size)
-        {
-            i++;
-            if (i == iEnd)
-                break;
-            iStart = i;
-        }
-        else
-            return i;
-        Assert(iEnd > iStart);
-    }
-
-    for (unsigned i = E1K_NUM_OF_BINARY_SEARCHABLE; i < RT_ELEMENTS(g_aE1kRegMap); i++)
-        if (offReg - g_aE1kRegMap[i].offset < g_aE1kRegMap[i].size)
-            return i;
-
-# ifdef VBOX_STRICT
-    for (unsigned i = 0; i < RT_ELEMENTS(g_aE1kRegMap); i++)
-        Assert(offReg - g_aE1kRegMap[i].offset >= g_aE1kRegMap[i].size);
-# endif
-
-#endif
-
-    return -1;
-}
-
-/**
- * Handle 4 byte aligned and sized read operation.
- *
- * Looks up and calls appropriate handler.
- *
- * @returns VBox status code.
- *
- * @param   pThis       The device state structure.
- * @param   offReg      Register offset in memory-mapped frame.
- * @param   pu32        Where to store the result.
- * @thread  EMT
- */
-static int ptnetRegReadAlignedU32(PPTNETST pThis, uint32_t offReg, uint32_t *pu32)
-{
-    Assert(!(offReg & 3));
-
-    /*
-     * Lookup the register and check that it's readable.
-     */
-    int rc     = VINF_SUCCESS;
-    int idxReg = ptnetRegLookup(offReg);
-    if (RT_LIKELY(idxReg != -1))
-    {
-        if (RT_UNLIKELY(g_aE1kRegMap[idxReg].readable))
-        {
-            /*
-             * Read it. Pass the mask so the handler knows what has to be read.
-             * Mask out irrelevant bits.
-             */
-            //rc = ptnetCsEnter(pThis, VERR_SEM_BUSY, RT_SRC_POS);
-            //if (RT_UNLIKELY(rc != VINF_SUCCESS))
-            //    return rc;
-            //pThis->fDelayInts = false;
-            //pThis->iStatIntLost += pThis->iStatIntLostOne;
-            //pThis->iStatIntLostOne = 0;
-            rc = g_aE1kRegMap[idxReg].pfnRead(pThis, offReg & 0xFFFFFFFC, idxReg, pu32);
-            //ptnetCsLeave(pThis);
-            Log6(("%s At %08X read  %08X          from %s (%s)\n",
-                  pThis->szPrf, offReg, *pu32, g_aE1kRegMap[idxReg].abbrev, g_aE1kRegMap[idxReg].name));
-            if (IOM_SUCCESS(rc))
-                STAM_COUNTER_INC(&pThis->aStatRegReads[idxReg]);
-        }
-        else
-            E1kLog(("%s At %08X read attempt from non-readable register %s (%s)\n",
-                    pThis->szPrf, offReg, g_aE1kRegMap[idxReg].abbrev, g_aE1kRegMap[idxReg].name));
-    }
-    else
-        E1kLog(("%s At %08X read attempt from non-existing register\n", pThis->szPrf, offReg));
-    return rc;
-}
-
-/**
- * Handle 4 byte sized and aligned register write operation.
- *
- * Looks up and calls appropriate handler.
- *
- * @returns VBox status code.
- *
- * @param   pThis       The device state structure.
- * @param   offReg      Register offset in memory-mapped frame.
- * @param   u32Value    The value to write.
- * @thread  EMT
- */
-static int ptnetRegWriteAlignedU32(PPTNETST pThis, uint32_t offReg, uint32_t u32Value)
-{
-    int         rc    = VINF_SUCCESS;
-    int         index = ptnetRegLookup(offReg);
-    if (RT_LIKELY(index != -1))
-    {
-        if (RT_LIKELY(g_aE1kRegMap[index].writable))
-        {
-            /*
-             * Write it. Pass the mask so the handler knows what has to be written.
-             * Mask out irrelevant bits.
-             */
-            Log6(("%s At %08X write          %08X  to  %s (%s)\n",
-                     pThis->szPrf, offReg, u32Value, g_aE1kRegMap[index].abbrev, g_aE1kRegMap[index].name));
-            //rc = ptnetCsEnter(pThis, VERR_SEM_BUSY, RT_SRC_POS);
-            //if (RT_UNLIKELY(rc != VINF_SUCCESS))
-            //    return rc;
-            //pThis->fDelayInts = false;
-            //pThis->iStatIntLost += pThis->iStatIntLostOne;
-            //pThis->iStatIntLostOne = 0;
-            rc = g_aE1kRegMap[index].pfnWrite(pThis, offReg, index, u32Value);
-            //ptnetCsLeave(pThis);
-        }
-        else
-            E1kLog(("%s At %08X write attempt (%08X) to  read-only register %s (%s)\n",
-                    pThis->szPrf, offReg, u32Value, g_aE1kRegMap[index].abbrev, g_aE1kRegMap[index].name));
-        if (IOM_SUCCESS(rc))
-            STAM_COUNTER_INC(&pThis->aStatRegWrites[index]);
-    }
-    else
-        E1kLog(("%s At %08X write attempt (%08X) to  non-existing register\n",
-                pThis->szPrf, offReg, u32Value));
-    return rc;
-}
-
 
 /* -=-=-=-=- MMIO and I/O Port Callbacks -=-=-=-=- */
 
@@ -411,16 +161,13 @@ PDMBOTHCBDECL(int) ptnetMMIORead(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCPh
 {
     RT_NOREF2(pvUser, cb);
     PPTNETST pThis  = PDMINS_2_DATA(pDevIns, PPTNETST);
-    STAM_PROFILE_ADV_START(&pThis->CTX_SUFF_Z(StatMMIORead), a);
-
     uint32_t  offReg = GCPhysAddr - pThis->addrMMReg;
-    Assert(offReg < E1K_MM_SIZE);
-    Assert(cb == 4);
-    Assert(!(GCPhysAddr & 3));
+    uint32_t *value = (uint32_t *)pv;
 
-    int rc = ptnetRegReadAlignedU32(pThis, offReg, (uint32_t *)pv);
+    *value = 0U;
+    Log(("%s %s: offReg=%08x cb=%u\n", pThis->szPrf, __func__, offReg, cb));
 
-    return rc;
+    return VINF_SUCCESS;
 }
 
 /**
@@ -430,16 +177,12 @@ PDMBOTHCBDECL(int) ptnetMMIOWrite(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCP
 {
     RT_NOREF2(pvUser, cb);
     PPTNETST pThis  = PDMINS_2_DATA(pDevIns, PPTNETST);
-    STAM_PROFILE_ADV_START(&pThis->CTX_SUFF_Z(StatMMIOWrite), a);
-
     uint32_t offReg = GCPhysAddr - pThis->addrMMReg;
-    Assert(offReg < E1K_MM_SIZE);
-    Assert(cb == 4);
-    Assert(!(GCPhysAddr & 3));
+    uint32_t value = *((uint32_t const *)pv);
 
-    int rc = ptnetRegWriteAlignedU32(pThis, offReg, *(uint32_t const *)pv);
+    Log(("%s %s: offReg=%08x value=%08x cb=%u\n", pThis->szPrf, __func__, offReg, value, cb));
 
-    return rc;
+    return VINF_SUCCESS;
 }
 
 /**
@@ -448,41 +191,16 @@ PDMBOTHCBDECL(int) ptnetMMIOWrite(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCP
 PDMBOTHCBDECL(int) ptnetIOPortIn(PPDMDEVINS pDevIns, void *pvUser, RTIOPORT uPort, uint32_t *pu32, unsigned cb)
 {
     PPTNETST   pThis = PDMINS_2_DATA(pDevIns, PPTNETST);
-    int         rc;
-    STAM_PROFILE_ADV_START(&pThis->CTX_SUFF_Z(StatIORead), a);
+    int         rc = VINF_SUCCESS;
     RT_NOREF_PV(pvUser);
 
-    uPort -= pThis->IOPortBase;
-    if (RT_LIKELY(cb == 4))
-        switch (uPort)
-        {
-            case 0x00: /* IOADDR */
-                *pu32 = pThis->uSelectedReg;
-                E1kLog2(("%s ptnetIOPortIn: IOADDR(0), selecting register %#010x, val=%#010x\n", pThis->szPrf, pThis->uSelectedReg, *pu32));
-                rc = VINF_SUCCESS;
-                break;
-
-            case 0x04: /* IODATA */
-                if (!(pThis->uSelectedReg & 3))
-                    rc = ptnetRegReadAlignedU32(pThis, pThis->uSelectedReg, pu32);
-                else /** @todo r=bird: I wouldn't be surprised if this unaligned branch wasn't necessary. */
-                    rc = ptnetRegReadUnaligned(pThis, pThis->uSelectedReg, pu32, cb);
-                if (rc == VINF_IOM_R3_MMIO_READ)
-                    rc = VINF_IOM_R3_IOPORT_READ;
-                E1kLog2(("%s ptnetIOPortIn: IODATA(4), reading from selected register %#010x, val=%#010x\n", pThis->szPrf, pThis->uSelectedReg, *pu32));
-                break;
-
-            default:
-                E1kLog(("%s ptnetIOPortIn: invalid port %#010x\n", pThis->szPrf, uPort));
-                //rc = VERR_IOM_IOPORT_UNUSED; /* Why not? */
-                rc = VINF_SUCCESS;
-        }
-    else
-    {
-        E1kLog(("%s ptnetIOPortIn: invalid op size: uPort=%RTiop cb=%08x", pThis->szPrf, uPort, cb));
-        rc = PDMDevHlpDBGFStop(pDevIns, RT_SRC_POS, "%s ptnetIOPortIn: invalid op size: uPort=%RTiop cb=%08x\n", pThis->szPrf, uPort, cb);
+    //uPort -= pThis->IOPortBase;
+    switch (uPort) {
+        default:
+            Log(("%s %s: uPort=%RTiop cb=%u\n", pThis->szPrf, __func__, uPort, cb));
+            break;
     }
-    STAM_PROFILE_ADV_STOP(&pThis->CTX_SUFF_Z(StatIORead), a);
+
     return rc;
 }
 
@@ -493,47 +211,16 @@ PDMBOTHCBDECL(int) ptnetIOPortIn(PPDMDEVINS pDevIns, void *pvUser, RTIOPORT uPor
 PDMBOTHCBDECL(int) ptnetIOPortOut(PPDMDEVINS pDevIns, void *pvUser, RTIOPORT uPort, uint32_t u32, unsigned cb)
 {
     PPTNETST   pThis = PDMINS_2_DATA(pDevIns, PPTNETST);
-    int         rc;
-    STAM_PROFILE_ADV_START(&pThis->CTX_SUFF_Z(StatIOWrite), a);
+    int         rc = VINF_SUCCESS;
     RT_NOREF_PV(pvUser);
 
-    E1kLog2(("%s ptnetIOPortOut: uPort=%RTiop value=%08x\n", pThis->szPrf, uPort, u32));
-    if (RT_LIKELY(cb == 4))
-    {
-        uPort -= pThis->IOPortBase;
-        switch (uPort)
-        {
-            case 0x00: /* IOADDR */
-                pThis->uSelectedReg = u32;
-                E1kLog2(("%s ptnetIOPortOut: IOADDR(0), selected register %08x\n", pThis->szPrf, pThis->uSelectedReg));
-                rc = VINF_SUCCESS;
-                break;
-
-            case 0x04: /* IODATA */
-                E1kLog2(("%s ptnetIOPortOut: IODATA(4), writing to selected register %#010x, value=%#010x\n", pThis->szPrf, pThis->uSelectedReg, u32));
-                if (RT_LIKELY(!(pThis->uSelectedReg & 3)))
-                {
-                    rc = ptnetRegWriteAlignedU32(pThis, pThis->uSelectedReg, u32);
-                    if (rc == VINF_IOM_R3_MMIO_WRITE)
-                        rc = VINF_IOM_R3_IOPORT_WRITE;
-                }
-                else
-                    rc = PDMDevHlpDBGFStop(pThis->CTX_SUFF(pDevIns), RT_SRC_POS,
-                                           "Spec violation: misaligned offset: %#10x, ignored.\n", pThis->uSelectedReg);
-                break;
-
-            default:
-                E1kLog(("%s ptnetIOPortOut: invalid port %#010x\n", pThis->szPrf, uPort));
-                rc = PDMDevHlpDBGFStop(pDevIns, RT_SRC_POS, "invalid port %#010x\n", uPort);
-        }
-    }
-    else
-    {
-        E1kLog(("%s ptnetIOPortOut: invalid op size: uPort=%RTiop cb=%08x\n", pThis->szPrf, uPort, cb));
-        rc = PDMDevHlpDBGFStop(pDevIns, RT_SRC_POS, "%s: invalid op size: uPort=%RTiop cb=%#x\n", pThis->szPrf, uPort, cb);
+    //uPort -= pThis->IOPortBase;
+    switch (uport) {
+        default;
+            Log(("%s %s: uPort=%RTiop value=%08x cb=%u\n", pThis->szPrf, __func__, uPort, u32, cb));
+            break;
     }
 
-    STAM_PROFILE_ADV_STOP(&pThis->CTX_SUFF_Z(StatIOWrite), a);
     return rc;
 }
 
@@ -554,32 +241,19 @@ static DECLCALLBACK(int) ptnetMap(PPDMDEVINS pDevIns, PPDMPCIDEV pPciDev, uint32
         case PCI_ADDRESS_SPACE_IO:
             pThis->IOPortBase = (RTIOPORT)GCPhysAddress;
             rc = PDMDevHlpIOPortRegister(pDevIns, pThis->IOPortBase, cb, NULL /*pvUser*/,
-                                         ptnetIOPortOut, ptnetIOPortIn, NULL, NULL, "E1000");
+                                         ptnetIOPortOut, ptnetIOPortIn, NULL, NULL, "PTNET");
             if (pThis->fR0Enabled && RT_SUCCESS(rc))
                 rc = PDMDevHlpIOPortRegisterR0(pDevIns, pThis->IOPortBase, cb, NIL_RTR0PTR /*pvUser*/,
-                                             "ptnetIOPortOut", "ptnetIOPortIn", NULL, NULL, "E1000");
-            if (pThis->fRCEnabled && RT_SUCCESS(rc))
-                rc = PDMDevHlpIOPortRegisterRC(pDevIns, pThis->IOPortBase, cb, NIL_RTRCPTR /*pvUser*/,
-                                               "ptnetIOPortOut", "ptnetIOPortIn", NULL, NULL, "E1000");
+                                             "ptnetIOPortOut", "ptnetIOPortIn", NULL, NULL, "PTNET");
             break;
 
         case PCI_ADDRESS_SPACE_MEM:
-            /*
-             * From the spec:
-             *    For registers that should be accessed as 32-bit double words,
-             *    partial writes (less than a 32-bit double word) is ignored.
-             *    Partial reads return all 32 bits of data regardless of the
-             *    byte enables.
-             */
             pThis->addrMMReg = GCPhysAddress; Assert(!(GCPhysAddress & 7));
             rc = PDMDevHlpMMIORegister(pDevIns, GCPhysAddress, cb, NULL /*pvUser*/,
                                        IOMMMIO_FLAGS_READ_DWORD | IOMMMIO_FLAGS_WRITE_ONLY_DWORD,
-                                       ptnetMMIOWrite, ptnetMMIORead, "E1000");
+                                       ptnetMMIOWrite, ptnetMMIORead, "PTNET");
             if (pThis->fR0Enabled && RT_SUCCESS(rc))
                 rc = PDMDevHlpMMIORegisterR0(pDevIns, GCPhysAddress, cb, NIL_RTR0PTR /*pvUser*/,
-                                             "ptnetMMIOWrite", "ptnetMMIORead");
-            if (pThis->fRCEnabled && RT_SUCCESS(rc))
-                rc = PDMDevHlpMMIORegisterRC(pDevIns, GCPhysAddress, cb, NIL_RTRCPTR /*pvUser*/,
                                              "ptnetMMIOWrite", "ptnetMMIORead");
             break;
 
@@ -602,6 +276,7 @@ static DECLCALLBACK(int) ptnetR3NetworkDown_WaitReceiveAvail(PPDMINETWORKDOWN pI
 {
     PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkDown);
 
+    Log(("%s %s\n", pThis->szPrf, __func__));
     //RTSemEventWait(pThis->hEvent, cMillies);
     return VINF_SUCCESS;
 }
@@ -623,6 +298,7 @@ static DECLCALLBACK(int) ptnetR3NetworkDown_Receive(PPDMINETWORKDOWN pInterface,
  */
 static DECLCALLBACK(void) ptnetR3NetworkDown_XmitPending(PPDMINETWORKDOWN pInterface)
 {
+    Log(("%s %s\n", pThis->szPrf, __func__));
 }
 
 /* -=-=-=-=- PDMINETWORKCONFIG -=-=-=-=- */
@@ -1060,9 +736,7 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
     pThis->INetworkConfig.pfnGetLinkState   = ptnetR3GetLinkState;
     pThis->INetworkConfig.pfnSetLinkState   = ptnetR3SetLinkState;
 
-
     pThis->fR0Enabled    = true;
-    pThis->fRCEnabled    = true;
 
     /* Get config params */
     rc = CFGMR3QueryBytes(pCfg, "MAC", pThis->macConfigured.au8, sizeof(pThis->macConfigured.au8));
@@ -1073,19 +747,14 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
     if (RT_FAILURE(rc))
         return PDMDEV_SET_ERROR(pDevIns, rc,
                                 N_("Configuration error: Failed to get the value of 'CableConnected'"));
-    rc = CFGMR3QueryBoolDef(pCfg, "GCEnabled", &pThis->fRCEnabled, true);
-    if (RT_FAILURE(rc))
-        return PDMDEV_SET_ERROR(pDevIns, rc,
-                                N_("Configuration error: Failed to get the value of 'GCEnabled'"));
 
     rc = CFGMR3QueryBoolDef(pCfg, "R0Enabled", &pThis->fR0Enabled, true);
     if (RT_FAILURE(rc))
         return PDMDEV_SET_ERROR(pDevIns, rc,
                                 N_("Configuration error: Failed to get the value of 'R0Enabled'"));
 
-    Log(("%s R0=%s GC=%s\n", pThis->szPrf,
-         pThis->fR0Enabled ? "enabled" : "disabled",
-         pThis->fRCEnabled ? "enabled" : "disabled"));
+    Log(("%s R0=%s\n", pThis->szPrf,
+         pThis->fR0Enabled ? "enabled" : "disabled"));
 
     /* Initialize critical sections. We do our own locking. */
     rc = PDMDevHlpSetDeviceCritSect(pDevIns, PDMDevHlpCritSectGetNop(pDevIns));
