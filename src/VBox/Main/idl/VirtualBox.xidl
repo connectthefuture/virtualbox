@@ -17175,6 +17175,9 @@ Snapshot 1 (B.vdi)            Snapshot 1 (B.vdi)
     <const name="Virtio"                value="6">
         <desc>Virtio network device.</desc>
     </const>
+    <const name="NetmapPtNet"           value="7">
+        <desc>Netmap passthrough network device.</desc>
+    </const>
   </enum>
 
   <enum
