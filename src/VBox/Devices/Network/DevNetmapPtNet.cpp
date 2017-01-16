@@ -65,14 +65,6 @@ struct PtnetState_st
     /** The scatter / gather buffer used for the current outgoing packet - R0. */
     R0PTRTYPE(PPDMSCATTERGATHER) pTxSgR0;
 
-    PPDMDEVINSRC            pDevInsRC;                   /**< Device instance - RC. */
-    RCPTRTYPE(PPDMQUEUE)    pTxQueueRC;                   /**< Transmit queue - RC. */
-    RCPTRTYPE(PPDMQUEUE)    pCanRxQueueRC;           /**< Rx wakeup signaller - RC. */
-    PPDMINETWORKUPRC        pDrvRC;              /**< Attached network driver - RC. */
-    /** The scatter / gather buffer used for the current outgoing packet - RC. */
-    RCPTRTYPE(PPDMSCATTERGATHER) pTxSgRC;
-    RTRCPTR                 RCPtrAlignment;
-
 #if HC_ARCH_BITS != 32
     uint32_t                Alignment1;
 #endif
@@ -835,7 +827,6 @@ static DECLCALLBACK(void) ptnetR3Detach(PPDMDEVINS pDevIns, unsigned iLUN, uint3
     pThis->pDrvBase = NULL;
     pThis->pDrvR3 = NULL;
     pThis->pDrvR0 = NIL_RTR0PTR;
-    pThis->pDrvRC = NIL_RTRCPTR;
 
     PDMCritSectLeave(&pThis->cs);
 }
@@ -876,9 +867,6 @@ static DECLCALLBACK(int) ptnetR3Attach(PPDMDEVINS pDevIns, unsigned iLUN, uint32
         {
             PPDMIBASER0 pBaseR0 = PDMIBASE_QUERY_INTERFACE(pThis->pDrvBase, PDMIBASER0);
             pThis->pDrvR0 = pBaseR0 ? pBaseR0->pfnQueryInterface(pBaseR0, PDMINETWORKUP_IID) : NIL_RTR0PTR;
-
-            PPDMIBASERC pBaseRC = PDMIBASE_QUERY_INTERFACE(pThis->pDrvBase, PDMIBASERC);
-            pThis->pDrvRC = pBaseRC ? pBaseRC->pfnQueryInterface(pBaseRC, PDMINETWORKUP_IID) : NIL_RTR0PTR;
         }
     }
     else if (   rc == VERR_PDM_NO_ATTACHED_DRIVER
@@ -944,9 +932,6 @@ static DECLCALLBACK(void) ptnetR3Relocate(PPDMDEVINS pDevIns, RTGCINTPTR offDelt
     /* XXX probably useless */
     RT_NOREF(offDelta);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
-    pThis->pDevInsRC     = PDMDEVINS_2_RCPTR(pDevIns);
-    pThis->pTxQueueRC    = PDMQueueRCPtr(pThis->pTxQueueR3);
-    pThis->pCanRxQueueRC = PDMQueueRCPtr(pThis->pCanRxQueueR3);
 }
 
 /**
@@ -1063,7 +1048,6 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
     pThis->hEvent = NIL_RTSEMEVENT;
     pThis->pDevInsR3    = pDevIns;
     pThis->pDevInsR0    = PDMDEVINS_2_R0PTR(pDevIns);
-    pThis->pDevInsRC    = PDMDEVINS_2_RCPTR(pDevIns);
 
     /* Interfaces */
     pThis->IBase.pfnQueryInterface          = ptnetR3QueryInterface;
@@ -1152,7 +1136,6 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
     if (RT_FAILURE(rc))
         return rc;
     pThis->pTxQueueR0 = PDMQueueR0Ptr(pThis->pTxQueueR3);
-    pThis->pTxQueueRC = PDMQueueRCPtr(pThis->pTxQueueR3);
 
     /* Create the RX notifier signaller. */
     rc = PDMDevHlpQueueCreate(pDevIns, sizeof(PDMQUEUEITEMCORE), 1, 0,
@@ -1160,7 +1143,6 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
     if (RT_FAILURE(rc))
         return rc;
     pThis->pCanRxQueueR0 = PDMQueueR0Ptr(pThis->pCanRxQueueR3);
-    pThis->pCanRxQueueRC = PDMQueueRCPtr(pThis->pCanRxQueueR3);
 
     /* Register the info item */
     char szTmp[20];
@@ -1180,7 +1162,6 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
         pThis->pDrvR3 = PDMIBASE_QUERY_INTERFACE(pThis->pDrvBase, PDMINETWORKUP);
         AssertMsgReturn(pThis->pDrvR3, ("Failed to obtain the PDMINETWORKUP interface!\n"), VERR_PDM_MISSING_INTERFACE_BELOW);
         pThis->pDrvR0 = PDMIBASER0_QUERY_INTERFACE(PDMIBASE_QUERY_INTERFACE(pThis->pDrvBase, PDMIBASER0), PDMINETWORKUP);
-        pThis->pDrvRC = PDMIBASERC_QUERY_INTERFACE(PDMIBASE_QUERY_INTERFACE(pThis->pDrvBase, PDMIBASERC), PDMINETWORKUP);
     }
     else if (   rc == VERR_PDM_NO_ATTACHED_DRIVER
              || rc == VERR_PDM_CFG_MISSING_DRIVER_NAME)
@@ -1210,7 +1191,7 @@ const PDMDEVREG g_DeviceNetmapPtNet =
     /* Device name. */
     "ptnet",
     /* Name of guest context module (no path).
-     * Only evalutated if PDM_DEVREG_FLAGS_RC is set. */
+     * Only evalutated if PDM_DEVREG_FLAGS_RC is set (which is not). */
     "VBoxDDRC.rc",
     /* Name of ring-0 module (no path).
      * Only evalutated if PDM_DEVREG_FLAGS_RC is set. */
@@ -1220,7 +1201,7 @@ const PDMDEVREG g_DeviceNetmapPtNet =
     "Netmap network passthrough device.\n",
 
     /* Flags, combination of the PDM_DEVREG_FLAGS_* \#defines. */
-    PDM_DEVREG_FLAGS_DEFAULT_BITS | PDM_DEVREG_FLAGS_RC /* TODO remove */ | PDM_DEVREG_FLAGS_R0,
+    PDM_DEVREG_FLAGS_DEFAULT_BITS | /* PDM_DEVREG_FLAGS_RC remove */ | PDM_DEVREG_FLAGS_R0,
     /* Device class(es), combination of the PDM_DEVREG_CLASS_* \#defines. */
     PDM_DEVREG_CLASS_NETWORK,
     /* Maximum number of instances (per VM). */
