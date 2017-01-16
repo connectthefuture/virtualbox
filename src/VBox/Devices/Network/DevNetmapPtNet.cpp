@@ -35,6 +35,13 @@
 #include "VBoxDD.h"
 
 
+#ifndef DEBUG
+#define PtnetLog(a)     LogRel(a)
+#else
+#define PtnetLog(a)     Log(a)
+#endif
+
+
 /**
  * Device state structure.
  *
@@ -105,20 +112,17 @@ typedef PTNETST *PPTNETST;
 static void ptnetWakeupReceive(PPDMDEVINS pDevIns)
 {
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PPTNETST);
-    E1kLog(("%s Waking up Out-of-RX-space semaphore\n",  pThis->szPrf));
+    PtnetLog(("%s Waking up Out-of-RX-space semaphore\n",  pThis->szPrf));
     RTSemEventSignal(pThis->hEvent);
 }
 #endif /* IN_RING3 */
 
-/**
- * Raise interrupt if not masked.
- *
- * @param   pThis       The device state structure.
- */
+#if 0
 static int ptnetRaiseInterrupt(PPTNETST pThis, int rcBusy, uint32_t u32IntCause = 0)
 {
 	PDMDevHlpPCISetIrq(pThis->CTX_SUFF(pDevIns), 0, 1);
 }
+#endif
 
 
 #ifdef IN_RING3
@@ -134,8 +138,8 @@ static int ptnetRaiseInterrupt(PPTNETST pThis, int rcBusy, uint32_t u32IntCause 
 static DECLCALLBACK(bool) ptnetTxQueueConsumer(PPDMDEVINS pDevIns, PPDMQUEUEITEMCORE pItem)
 {
     NOREF(pItem);
-    PE1KSTATE pThis = PDMINS_2_DATA(pDevIns, PE1KSTATE);
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PPTNETST  pThis = PDMINS_2_DATA(pDevIns, PPTNETST);
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     return true;
 }
 
@@ -165,7 +169,7 @@ PDMBOTHCBDECL(int) ptnetMMIORead(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCPh
     uint32_t *value = (uint32_t *)pv;
 
     *value = 0U;
-    Log(("%s %s: offReg=%08x cb=%u\n", pThis->szPrf, __func__, offReg, cb));
+    PtnetLog(("%s %s: offReg=%08x cb=%u\n", pThis->szPrf, __func__, offReg, cb));
 
     return VINF_SUCCESS;
 }
@@ -180,7 +184,7 @@ PDMBOTHCBDECL(int) ptnetMMIOWrite(PPDMDEVINS pDevIns, void *pvUser, RTGCPHYS GCP
     uint32_t offReg = GCPhysAddr - pThis->addrMMReg;
     uint32_t value = *((uint32_t const *)pv);
 
-    Log(("%s %s: offReg=%08x value=%08x cb=%u\n", pThis->szPrf, __func__, offReg, value, cb));
+    PtnetLog(("%s %s: offReg=%08x value=%08x cb=%u\n", pThis->szPrf, __func__, offReg, value, cb));
 
     return VINF_SUCCESS;
 }
@@ -197,7 +201,7 @@ PDMBOTHCBDECL(int) ptnetIOPortIn(PPDMDEVINS pDevIns, void *pvUser, RTIOPORT uPor
     //uPort -= pThis->IOPortBase;
     switch (uPort) {
         default:
-            Log(("%s %s: uPort=%RTiop cb=%u\n", pThis->szPrf, __func__, uPort, cb));
+            PtnetLog(("%s %s: uPort=%RTiop cb=%u\n", pThis->szPrf, __func__, uPort, cb));
             break;
     }
 
@@ -217,7 +221,7 @@ PDMBOTHCBDECL(int) ptnetIOPortOut(PPDMDEVINS pDevIns, void *pvUser, RTIOPORT uPo
     //uPort -= pThis->IOPortBase;
     switch (uport) {
         default;
-            Log(("%s %s: uPort=%RTiop value=%08x cb=%u\n", pThis->szPrf, __func__, uPort, u32, cb));
+            PtnetLog(("%s %s: uPort=%RTiop value=%08x cb=%u\n", pThis->szPrf, __func__, uPort, u32, cb));
             break;
     }
 
@@ -276,7 +280,7 @@ static DECLCALLBACK(int) ptnetR3NetworkDown_WaitReceiveAvail(PPDMINETWORKDOWN pI
 {
     PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkDown);
 
-    Log(("%s %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s %s\n", pThis->szPrf, __func__));
     //RTSemEventWait(pThis->hEvent, cMillies);
     return VINF_SUCCESS;
 }
@@ -289,7 +293,7 @@ static DECLCALLBACK(int) ptnetR3NetworkDown_Receive(PPDMINETWORKDOWN pInterface,
     PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkDown);
     int       rc = VINF_SUCCESS;
 
-    Log(("%s Dropping incoming packet.\n", pThis->szPrf));
+    PtnetLog(("%s Dropping incoming packet.\n", pThis->szPrf));
     return VINF_SUCCESS;
 }
 
@@ -298,7 +302,7 @@ static DECLCALLBACK(int) ptnetR3NetworkDown_Receive(PPDMINETWORKDOWN pInterface,
  */
 static DECLCALLBACK(void) ptnetR3NetworkDown_XmitPending(PPDMINETWORKDOWN pInterface)
 {
-    Log(("%s %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s %s\n", pThis->szPrf, __func__));
 }
 
 /* -=-=-=-=- PDMINETWORKCONFIG -=-=-=-=- */
@@ -309,7 +313,7 @@ static DECLCALLBACK(void) ptnetR3NetworkDown_XmitPending(PPDMINETWORKDOWN pInter
 static DECLCALLBACK(int) ptnetR3GetMac(PPDMINETWORKCONFIG pInterface, PRTMAC pMac)
 {
     PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkConfig);
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     //TODO get mac from MACHI and MACLO registers
     memset(pMac, 0x4, 6);
     return VINF_SUCCESS;
@@ -320,7 +324,7 @@ static DECLCALLBACK(int) ptnetR3GetMac(PPDMINETWORKCONFIG pInterface, PRTMAC pMa
  */
 static DECLCALLBACK(PDMNETWORKLINKSTATE) ptnetR3GetLinkState(PPDMINETWORKCONFIG pInterface)
 {
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     return PDMNETWORKLINKSTATE_UP;
 }
 
@@ -331,7 +335,7 @@ static DECLCALLBACK(int) ptnetR3SetLinkState(PPDMINETWORKCONFIG pInterface, PDMN
 {
     PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkConfig);
 
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     switch (enmState)
     {
         case PDMNETWORKLINKSTATE_UP:
@@ -374,7 +378,7 @@ static DECLCALLBACK(int) ptnetLiveExec(PPDMDEVINS pDevIns, PSSMHANDLE pSSM, uint
 {
     RT_NOREF(uPass);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     SSMR3PutMem(pSSM, &pThis->macConfigured, sizeof(pThis->macConfigured));
     return VINF_SSM_DONT_CALL_AGAIN;
 }
@@ -387,7 +391,7 @@ static DECLCALLBACK(int) ptnetSavePrep(PPDMDEVINS pDevIns, PSSMHANDLE pSSM)
     RT_NOREF(pSSM);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
 
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     return VINF_SUCCESS;
 }
 
@@ -398,7 +402,7 @@ static DECLCALLBACK(int) ptnetSaveExec(PPDMDEVINS pDevIns, PSSMHANDLE pSSM)
 {
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
 
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     SSMR3PutMem(pSSM, pThis->auRegs, sizeof(pThis->auRegs));
     return VINF_SUCCESS;
 }
@@ -411,7 +415,7 @@ static DECLCALLBACK(int) ptnetLoadPrep(PPDMDEVINS pDevIns, PSSMHANDLE pSSM)
     RT_NOREF(pSSM);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
 
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     return VINF_SUCCESS;
 }
 
@@ -423,12 +427,12 @@ static DECLCALLBACK(int) ptnetLoadExec(PPDMDEVINS pDevIns, PSSMHANDLE pSSM, uint
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
     int       rc;
 
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     if (uPass == SSM_PASS_FINAL)
     {
         /* the state */
         SSMR3GetMem(pSSM, &pThis->auRegs, sizeof(pThis->auRegs));
-    	Log(("%s: State restored\n", pThis->szPrf));
+    	PtnetLog(("%s: State restored\n", pThis->szPrf));
     }
     return VINF_SUCCESS;
 }
@@ -441,7 +445,7 @@ static DECLCALLBACK(int) ptnetLoadDone(PPDMDEVINS pDevIns, PSSMHANDLE pSSM)
     RT_NOREF(pSSM);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
 
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     /* Update promiscuous mode */
     if (pThis->pDrvR3)
         pThis->pDrvR3->pfnSetPromiscuousMode(pThis->pDrvR3, 1);
@@ -451,7 +455,7 @@ static DECLCALLBACK(int) ptnetLoadDone(PPDMDEVINS pDevIns, PSSMHANDLE pSSM)
 
 
 
-/* -=-=-=-=- Debug Info + Log Types -=-=-=-=- */
+/* -=-=-=-=- Debug Info + PtnetLog Types -=-=-=-=- */
 
 /**
  * Status info callback.
@@ -487,9 +491,9 @@ static DECLCALLBACK(void) ptnetR3Detach(PPDMDEVINS pDevIns, unsigned iLUN, uint3
 {
     RT_NOREF(fFlags);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
-    Log(("%s ptnetR3Detach:\n", pThis->szPrf));
+    PtnetLog(("%s ptnetR3Detach:\n", pThis->szPrf));
 
-    AssertLogRelReturnVoid(iLUN == 0);
+    AssertPtnetLogRelReturnVoid(iLUN == 0);
 
     PDMCritSectEnter(&pThis->cs, VERR_SEM_BUSY);
 
@@ -524,9 +528,9 @@ static DECLCALLBACK(int) ptnetR3Attach(PPDMDEVINS pDevIns, unsigned iLUN, uint32
     RT_NOREF(fFlags);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
 
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
 
-    AssertLogRelReturn(iLUN == 0, VERR_PDM_NO_SUCH_LUN);
+    AssertPtnetLogRelReturn(iLUN == 0, VERR_PDM_NO_SUCH_LUN);
 
     PDMCritSectEnter(&pThis->cs, VERR_SEM_BUSY);
 
@@ -550,7 +554,7 @@ static DECLCALLBACK(int) ptnetR3Attach(PPDMDEVINS pDevIns, unsigned iLUN, uint32
     {
         /* This should never happen because this function is not called
          * if there is no driver to attach! */
-        Log(("%s No attached driver!\n", pThis->szPrf));
+        PtnetLog(("%s No attached driver!\n", pThis->szPrf));
     }
 
     PDMCritSectLeave(&pThis->cs);
@@ -564,7 +568,7 @@ static DECLCALLBACK(int) ptnetR3Attach(PPDMDEVINS pDevIns, unsigned iLUN, uint32
 static DECLCALLBACK(void) ptnetR3PowerOff(PPDMDEVINS pDevIns)
 {
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
-    Log(("%s\n", pThis->szPrf));
+    PtnetLog(("%s\n", pThis->szPrf));
     ptnetWakeupReceive(pDevIns);
 }
 
@@ -574,7 +578,7 @@ static DECLCALLBACK(void) ptnetR3PowerOff(PPDMDEVINS pDevIns)
 static DECLCALLBACK(void) ptnetR3Reset(PPDMDEVINS pDevIns)
 {
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
-    Log(("%s\n", pThis->szPrf));
+    PtnetLog(("%s\n", pThis->szPrf));
 }
 
 /**
@@ -583,7 +587,7 @@ static DECLCALLBACK(void) ptnetR3Reset(PPDMDEVINS pDevIns)
 static DECLCALLBACK(void) ptnetR3Suspend(PPDMDEVINS pDevIns)
 {
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
-    Log(("%s\n", pThis->szPrf));
+    PtnetLog(("%s\n", pThis->szPrf));
     ptnetWakeupReceive(pDevIns);
 }
 
@@ -624,7 +628,7 @@ static DECLCALLBACK(int) ptnetR3Destruct(PPDMDEVINS pDevIns)
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
     PDMDEV_CHECK_VERSIONS_RETURN_QUIET(pDevIns);
 
-    Log(("%s: %s\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     if (PDMCritSectIsInitialized(&pThis->cs))
     {
         RTSemEventSignal(pThis->hEvent);
@@ -720,7 +724,7 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
      * Note! Caller has initialized it to ZERO already.
      */
     RTStrPrintf(pThis->szPrf, sizeof(pThis->szPrf), "PTNET#%d", iInstance);
-    Log(("%s: %s starts\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s starts\n", pThis->szPrf, __func__));
     pThis->hEvent = NIL_RTSEMEVENT;
     pThis->pDevInsR3    = pDevIns;
     pThis->pDevInsR0    = PDMDEVINS_2_R0PTR(pDevIns);
@@ -753,7 +757,7 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
         return PDMDEV_SET_ERROR(pDevIns, rc,
                                 N_("Configuration error: Failed to get the value of 'R0Enabled'"));
 
-    Log(("%s R0=%s\n", pThis->szPrf,
+    PtnetLog(("%s R0=%s\n", pThis->szPrf,
          pThis->fR0Enabled ? "enabled" : "disabled"));
 
     /* Initialize critical sections. We do our own locking. */
@@ -836,7 +840,7 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
              || rc == VERR_PDM_CFG_MISSING_DRIVER_NAME)
     {
         /* No error! */
-        Log(("%s: %s This adapter is not attached to any network\n", pThis->szPrf, __func__));
+        PtnetLog(("%s: %s This adapter is not attached to any network\n", pThis->szPrf, __func__));
     }
     else
         return PDMDEV_SET_ERROR(pDevIns, rc, N_("Failed to attach the network LUN"));
@@ -845,7 +849,7 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
     if (RT_FAILURE(rc))
         return rc;
 
-    Log(("%s: %s ends\n", pThis->szPrf, __func__));
+    PtnetLog(("%s: %s ends\n", pThis->szPrf, __func__));
 
     return VINF_SUCCESS;
 }
