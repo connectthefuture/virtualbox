@@ -838,12 +838,6 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
     RTStrPrintf(szTmp, sizeof(szTmp), "ptnet%d", iInstance);
     PDMDevHlpDBGFInfoRegister(pDevIns, szTmp, "PTNET info.", ptnetInfo);
 
-    /* Status driver */
-    PPDMIBASE pBase;
-    rc = PDMDevHlpDriverAttach(pDevIns, PDM_STATUS_LUN, &pThis->IBase, &pBase, "Status Port");
-    if (RT_FAILURE(rc))
-        return PDMDEV_SET_ERROR(pDevIns, rc, N_("Failed to attach the status LUN"));
-
     /* Network driver */
     rc = PDMDevHlpDriverAttach(pDevIns, 0, &pThis->IBase, &pThis->pDrvBase, "Network Port");
     if (RT_SUCCESS(rc))
