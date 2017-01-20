@@ -104,6 +104,7 @@ prepare() {
 build() {
     cd "virtualbox"
 
+    # --disable-hardening and --disable-vmm-raw were not there
     msg2 'Build virtualbox'
     ./configure \
         --disable-docs \
@@ -111,7 +112,9 @@ build() {
         --enable-vde \
         --enable-vnc \
         --disable-kmods \
-        --with-makeself=/usr/bin/echo
+        --with-makeself=/usr/bin/echo \
+        --disable-hardening \
+        --disable-vmmraw
     # fake makeself binary to compile without nofatal
     # makeself is used by linux installer. we don't need it.
     source ./env.sh
