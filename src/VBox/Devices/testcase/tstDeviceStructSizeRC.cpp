@@ -99,10 +99,6 @@
 # undef LOG_GROUP
 # include "../Network/DevE1000.cpp"
 #endif
-#ifdef VBOX_WITH_PTNET
-# undef LOG_GROUP
-# include "../Network/DevNetmapPtNet.cpp"
-#endif
 #ifdef VBOX_WITH_VIRTIO
 # undef LOG_GROUP
 # include "../Network/DevVirtioNet.cpp"
