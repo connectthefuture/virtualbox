@@ -1652,6 +1652,8 @@ def getAdapterType(ctx, natype):
         return "e1000"
     elif (natype == ctx['global'].constants.NetworkAdapterType_Virtio):
         return "virtio"
+    elif (natype == ctx['global'].constants.NetworkAdapterType_NetmapPtNet):
+        return "ptnet"
     elif (natype == ctx['global'].constants.NetworkAdapterType_Null):
         return None
     else:
@@ -2971,7 +2973,7 @@ def nicEnableSubCmd(ctx, vm, nicnum, adapter, args):
 
 def nicTypeSubCmd(ctx, vm, nicnum, adapter, args):
     '''
-    usage: nic <vm> <nicnum> type [Am79c970A|Am79c970A|I82540EM|I82545EM|I82543GC|Virtio]
+    usage: nic <vm> <nicnum> type [Am79c970A|Am79c970A|I82540EM|I82545EM|I82543GC|Virtio|NetmapPtNet]
     '''
     if len(args) == 1:
         nictypes = ctx['const'].all_values('NetworkAdapterType')

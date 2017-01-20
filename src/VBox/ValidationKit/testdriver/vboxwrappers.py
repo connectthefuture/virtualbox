@@ -1228,6 +1228,8 @@ class SessionWrapper(TdTaskBase):
             sName = 'e1000';
         elif eNicType == vboxcon.NetworkAdapterType_Virtio:
             sName = 'virtio-net';
+        elif eNicType == vboxcon.NetworkAdapterType_NetmapPtNet:
+            sName = 'ptnet';
         else:
             reporter.error('Unknown adapter type "%s" (VM: "%s")' % (eNicType, self.sName));
             sName = 'pcnet';
@@ -1245,7 +1247,7 @@ class SessionWrapper(TdTaskBase):
 
         # Nuke the old setup for all possible adapter types (in case we're
         # called after it changed).
-        for sName in ('pcnet', 'e1000', 'virtio-net'):
+        for sName in ('pcnet', 'e1000', 'virtio-net', 'ptnet'):
             for sConfig in ('VBoxInternal/Devices/%s/%u/LUN#0/AttachedDriver/Config' % (sName, iNic), \
                             'VBoxInternal/Devices/%s/%u/LUN#0/Config' % (sName, iNic)):
                 try:
@@ -1984,6 +1986,7 @@ class SessionWrapper(TdTaskBase):
         elif sType == "E1000Desk":  enmType = vboxcon.NetworkAdapterType_I82540EM; # MT Desktop
         elif sType == "E1000Srv2":  enmType = vboxcon.NetworkAdapterType_I82543GC; # T Server
         elif sType == "Virtio":     enmType = vboxcon.NetworkAdapterType_Virtio;
+        elif sType == "NetmapPtNet": enmType = vboxcon.NetworkAdapterType_NetmapPtNet;
         else:
             reporter.error('Invalid NIC type: "%s" (sXXX=%s)' % (sType, sXXX));
             return False;

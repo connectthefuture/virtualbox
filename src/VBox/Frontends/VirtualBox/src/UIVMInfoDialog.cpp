@@ -300,6 +300,9 @@ void UIVMInfoDialog::retranslateUi()
             case KNetworkAdapterType_Virtio:
                 name = "VNet";
                 break;
+            case KNetworkAdapterType_NetmapPtNet:
+                name = "PtNet";
+                break;
             default:
                 name = "PCNet";
                 break;

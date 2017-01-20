@@ -4235,6 +4235,7 @@ HRESULT Console::i_onNATDnsChanged()
             notifyNatDnsChange(ptrVM.rawUVM(), "pcnet", ulInstanceMax);
             notifyNatDnsChange(ptrVM.rawUVM(), "e1000", ulInstanceMax);
             notifyNatDnsChange(ptrVM.rawUVM(), "virtio-net", ulInstanceMax);
+            notifyNatDnsChange(ptrVM.rawUVM(), "ptnet", ulInstanceMax);
         }
     }
 
@@ -4918,6 +4919,7 @@ DECLCALLBACK(int) Console::i_changeNetworkAttachment(Console *pThis,
         pSystemProperties->GetMaxNetworkAdapters(chipsetType, &maxNetworkAdapters);
     AssertMsg(   (   !strcmp(pszDevice, "pcnet")
                   || !strcmp(pszDevice, "e1000")
+                  || !strcmp(pszDevice, "ptnet")
                   || !strcmp(pszDevice, "virtio-net"))
               && uLun == 0
               && uInstance < maxNetworkAdapters,

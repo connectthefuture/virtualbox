@@ -215,6 +215,7 @@ static const DeviceAliasRule aDeviceAliases[] =
     {"e1000",       "nic"},
     {"pcnet",       "nic"},
     {"virtio-net",  "nic"},
+    {"ptnet",       "nic"},
     {"ahci",        "storage"},
     {"lsilogic",    "storage"},
     {"buslogic",    "storage"},

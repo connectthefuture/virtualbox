@@ -1964,6 +1964,7 @@ class TestDriver(base.TestDriver):                                              
             elif oNic.adapterType == vboxcon.NetworkAdapterType_I82540EM:   sType = "E1000Desk";
             elif oNic.adapterType == vboxcon.NetworkAdapterType_I82543GC:   sType = "E1000Srv2";
             elif oNic.adapterType == vboxcon.NetworkAdapterType_Virtio:     sType = "Virtio";
+            elif oNic.adapterType == vboxcon.NetworkAdapterType_NetmapPtNet: sType = "NetmapPtNet";
             else: sType = "unknown %s" % (oNic.adapterType);
             reporter.log("    slot #%d: type: %s (%s) MAC Address: %s lineSpeed: %s" % \
                          (iSlot, sType, oNic.adapterType, oNic.MACAddress, oNic.lineSpeed) );
