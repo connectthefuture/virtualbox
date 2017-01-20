@@ -105,6 +105,10 @@ typedef PTNETST *PPTNETST;
 
 #ifdef IN_RING3
 
+#include <net/if.h>
+#include <net/netmap.h>
+#include <net/netmap_virt.h>
+
 /**
  * Wakeup the RX thread.
  */
@@ -657,8 +661,8 @@ static DECLCALLBACK(int) ptnetR3Destruct(PPDMDEVINS pDevIns)
 static DECLCALLBACK(void) ptnetConfigurePciDev(PPDMPCIDEV pPciDev)
 {
     /* Configure PCI Device, assume 32-bit mode ******************************/
-    PCIDevSetVendorId(pPciDev, 0x0000);
-    PCIDevSetDeviceId(pPciDev, 0x0000);
+    PCIDevSetVendorId(pPciDev, PTNETMAP_PCI_VENDOR_ID);
+    PCIDevSetDeviceId(pPciDev, PTNETMAP_PCI_NETIF_ID);
     PCIDevSetWord( pPciDev, VBOX_PCI_SUBSYSTEM_VENDOR_ID, 0x0000);
     PCIDevSetWord( pPciDev, VBOX_PCI_SUBSYSTEM_ID, 0x0000);
 
@@ -672,12 +676,12 @@ static DECLCALLBACK(void) ptnetConfigurePciDev(PPDMPCIDEV pPciDev)
     PCIDevSetWord( pPciDev, VBOX_PCI_CLASS_DEVICE,       0x0200);
     /* normal single function Ethernet controller */
     PCIDevSetByte( pPciDev, VBOX_PCI_HEADER_TYPE,          0x00);
-    /* Memory Register Base Address */
-    PCIDevSetDWord(pPciDev, VBOX_PCI_BASE_ADDRESS_0, 0x00000000);
-    /* Memory Flash Base Address */
-    PCIDevSetDWord(pPciDev, VBOX_PCI_BASE_ADDRESS_1, 0x00000000);
     /* IO Register Base Address */
-    PCIDevSetDWord(pPciDev, VBOX_PCI_BASE_ADDRESS_2, 0x00000001);
+    PCIDevSetDWord(pPciDev, VBOX_PCI_BASE_ADDRESS_0, 0x00000001);
+    /* XXX Unused, memory */
+    PCIDevSetDWord(pPciDev, VBOX_PCI_BASE_ADDRESS_1, 0x00000000);
+    /* Memory Register Base Address */
+    PCIDevSetDWord(pPciDev, VBOX_PCI_BASE_ADDRESS_2, 0x00000000);
     /* Capabilities Pointer */
     PCIDevSetByte( pPciDev, VBOX_PCI_CAPABILITY_LIST,      0xDC);
     /* Interrupt Pin: INTA# */
@@ -802,12 +806,16 @@ static DECLCALLBACK(int) ptnetR3Construct(PPDMDEVINS pDevIns, int iInstance, PCF
     AssertRCReturn(rc, rc);
 #endif
 
-    /* Map our registers to memory space (region 0, see ptnetConfigurePciDev)*/
-    rc = PDMDevHlpPCIIORegionRegister(pDevIns, 0, /* size */256, PCI_ADDRESS_SPACE_MEM, ptnetMap);
+    /* Map our registers to IO space (region 0, see ptnetConfigurePciDev)*/
+    rc = PDMDevHlpPCIIORegionRegister(pDevIns, PTNETMAP_IO_PCI_BAR,
+                                      /* size */PTNET_IO_MASK + 1,
+                                      PCI_ADDRESS_SPACE_IO, ptnetMap);
     if (RT_FAILURE(rc))
         return rc;
-    /* Map our registers to IO space (region 2, see ptnetConfigurePciDev) */
-    rc = PDMDevHlpPCIIORegionRegister(pDevIns, 2, /* size */ 64, PCI_ADDRESS_SPACE_IO, ptnetMap);
+    /* Map memory for MSI-X (region 2, see ptnetConfigurePciDev) */
+    rc = PDMDevHlpPCIIORegionRegister(pDevIns, PTNETMAP_MSIX_PCI_BAR,
+                                      /* size */ 4096, PCI_ADDRESS_SPACE_MEM,
+                                      ptnetMap);
     if (RT_FAILURE(rc))
         return rc;
 
