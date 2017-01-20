@@ -30,7 +30,6 @@
 #include <iprt/uuid.h>
 #include <VBox/vmm/pdmdev.h>
 #include <VBox/vmm/pdmnetifs.h>
-#include <VBox/vmm/pdmnetinline.h>
 #include <VBox/param.h>
 #include "VBoxDD.h"
 
@@ -329,6 +328,7 @@ static DECLCALLBACK(int) ptnetR3GetMac(PPDMINETWORKCONFIG pInterface, PRTMAC pMa
  */
 static DECLCALLBACK(PDMNETWORKLINKSTATE) ptnetR3GetLinkState(PPDMINETWORKCONFIG pInterface)
 {
+    PPTNETST pThis = RT_FROM_MEMBER(pInterface, PTNETST, INetworkConfig);
     PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
     return PDMNETWORKLINKSTATE_UP;
 }
@@ -498,10 +498,10 @@ static DECLCALLBACK(void) ptnetR3Detach(PPDMDEVINS pDevIns, unsigned iLUN, uint3
 {
     RT_NOREF(fFlags);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
+
     PtnetLog(("%s ptnetR3Detach:\n", pThis->szPrf));
 
-    AssertPtnetLogRelReturnVoid(iLUN == 0);
-
+    AssertLogRelReturnVoid(iLUN == 0);
     PDMCritSectEnter(&pThis->cs, VERR_SEM_BUSY);
 
     /** @todo r=pritesh still need to check if i missed
@@ -537,7 +537,7 @@ static DECLCALLBACK(int) ptnetR3Attach(PPDMDEVINS pDevIns, unsigned iLUN, uint32
 
     PtnetLog(("%s: %s\n", pThis->szPrf, __func__));
 
-    AssertPtnetLogRelReturn(iLUN == 0, VERR_PDM_NO_SUCH_LUN);
+    AssertLogRelReturn(iLUN == 0, VERR_PDM_NO_SUCH_LUN);
 
     PDMCritSectEnter(&pThis->cs, VERR_SEM_BUSY);
 
@@ -619,6 +619,7 @@ static DECLCALLBACK(void) ptnetR3Relocate(PPDMDEVINS pDevIns, RTGCINTPTR offDelt
     /* XXX probably useless */
     RT_NOREF(offDelta);
     PPTNETST pThis = PDMINS_2_DATA(pDevIns, PTNETST*);
+    NOREF(pThis);
 }
 
 /**
