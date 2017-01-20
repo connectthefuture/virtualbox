@@ -429,7 +429,7 @@ VBOX_WITH_NAT_SERVICE = 1
 # Enable the E1000 feature.
 VBOX_WITH_E1000 = 1
 # Enable the netmap ptnet feature.
-#VBOX_WITH_PTNET = 1
+VBOX_WITH_PTNET = 1
 # Enable the Virtio feature.
 VBOX_WITH_VIRTIO = 1
 ifn1of ($(KBUILD_TARGET), win darwin)
